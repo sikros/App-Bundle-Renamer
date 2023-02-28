@@ -1,7 +1,5 @@
-import sys, re , os,json
-import zipfile, plistlib
-import requests,shutil
-
+import zipfile, plistlib,requests
+import sys,re,os,json,shutil
 def analyze_ipa(ipa_path):
     ipa_file = zipfile.ZipFile(ipa_path)
     plist_path = find_plist_path(ipa_file)
@@ -23,8 +21,12 @@ def print_ipa_info(plist_root):
     print ('Version: %s' % plist_root['CFBundleShortVersionString'])
     return plist_root['CFBundleDisplayName'],plist_root['CFBundleShortVersionString']
 
-def query_appstore(bundle_id):
+def query_itunes_id(bundle_id):
     resp=requests.get("https://itunes.apple.com/cn/lookup?bundleId={}".format(bundle_id)) 
+    return resp.json()
+
+def query_itunes_name(bundle_name):
+    resp=requests.get("https://itunes.apple.com/search?term={}&country=cn&entity=software".format(bundle_name))
     return resp.json()
 
 def get_dir_ipa(work_dir):
@@ -35,38 +37,16 @@ def get_dir_ipa(work_dir):
                 list.append(os.path.join(root,filename))
         return list
 
-if __name__ == '__main__':   
-    if len(sys.argv) == 1:
-        work_dir=input('请输入目录：')        
+def get_ipa_genre(file_info):                          
+    bundle_info=query_itunes_id(file_info['CFBundleIdentifier'])    
+    if bundle_info['resultCount']>0:
+        bundle_genre=bundle_info['results'][0]['primaryGenreName']
     else:
-        work_dir = sys.argv[1]
-    try:
-        os.chdir(work_dir)
-    except:
-        print("No such file or directory")
-        exit()
-    ipafiles = get_dir_ipa(work_dir)
-    if not ipafiles:
-        print('Error: Can not find .ipk files in target dir')
-        exit()
-    
+        bundle_info=query_itunes_name(file_info['CFBundleDisplayName'])
+        if bundle_info['resultCount']>0:
+            bundle_genre=bundle_info['results'][0]['primaryGenreName']
+        else:
+            bundle_genre='Others'
+    return bundle_genre
 
-    for file in ipafiles:
-        try:            
-            file_path, file_name = os.path.split(file)
-            file_info=analyze_ipa(file)     
-            bundle_info=query_appstore(file_info['CFBundleIdentifier'])       
 
-            if bundle_info['resultCount']>0:
-                file_path = os.path.join(file_path,bundle_info['results'][0]['primaryGenreName'].replace(" ",""))
-            print(file_path)
-            os.makedirs(file_path,exist_ok=True)
-
-            dst_file_name=os.path.join(file_path,"{}_{}@{}.ipa".format(file_info['CFBundleDisplayName'],file_info['CFBundleShortVersionString'],file_info['CFBundleIdentifier']).replace(" ", "_"))
-            if os.path.exists(dst_file_name):
-                raise AttributeError('目标文件{}已存在'.format(dst_file_name))
-            shutil.move(file, dst_file_name.replace(' ',"_"))
- 
-        except Exception as e:
-            print('%s重命名失败:%s'%(file,e))
-            
