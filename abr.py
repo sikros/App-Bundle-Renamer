@@ -17,12 +17,12 @@ App Bundle Renamer , IPA包文件重命名,自动分类工具。
 
     """
     print (readme)
-    exit()
+    sys.exit()
 
 def web():    
     url="https://www.iosr.cc/"
     webbrowser.open(url)
-    exit()
+    sys.exit()
     
 if __name__ == '__main__':   
     print("App Bundle Renamer \n Code by sikro@52pojie")
@@ -59,13 +59,13 @@ if __name__ == '__main__':
         os.chdir(src_dir)
     except Exception as e:
         print(format(e))
-        exit()
+        sys.exit()
 
     #List ipa files
     ipafiles = get_dir_ipa(src_dir)
     if not ipafiles:
         print('[Error] No .ipa files in target dir')
-        exit()
+        sys.exit()
     
     #Analyze ipa file infomation
     for file in ipafiles:    
